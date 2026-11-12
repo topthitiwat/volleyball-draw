@@ -18,8 +18,8 @@
         .settings-trigger { position: absolute; top: 20px; right: 20px; background: #334155; color: #38bdf8; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: all 0.2s; }
         .settings-trigger:hover { background: #475569; transform: rotate(45deg); }
 
-        .header { text-align: center; margin-bottom: 20px; margin-top: 10px; }
-        .header h1 { font-size: 2.2rem; font-weight: 700; color: #38bdf8; text-shadow: 0 2px 10px rgba(56,189,248,0.3); }
+        .header { text-align: center; margin-bottom: 20px; margin-top: 10px; user-select: none; -webkit-user-select: none; }
+        .header h1 { font-size: 2.2rem; font-weight: 700; color: #38bdf8; text-shadow: 0 2px 10px rgba(56,189,248,0.3); cursor: default; }
         .header p { color: #94a3b8; font-size: 1rem; }
 
         .controls { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }
@@ -73,6 +73,7 @@
         .team-edit-row input[type="text"] { flex: 1; padding: 8px 12px; background: #1e293b; border: 1px solid #475569; color: white; border-radius: 4px; font-size: 1rem; }
 
         .preset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        @media (max-width: 600px) { .preset-grid { grid-template-columns: repeat(2, 1fr); } }
         .preset-slot { background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #475569; text-align: center; }
         .preset-slot label { font-size: 0.8rem; color: #38bdf8; display: block; margin-bottom: 5px; }
         .preset-slot select { width: 100%; padding: 6px; background: #1e293b; color: white; border: 1px solid #475569; border-radius: 4px; font-size: 0.9rem; }
@@ -262,7 +263,33 @@
             updateHeaderDisplay();
             renderGroups();
             checkComplete();
+            setupMobileSecretTrigger();
         };
+
+        // ทางลัดเปิดหน้าหลังบ้านบน iPad / มือถือ (แตะค้างที่ชื่อรายการ 3 วินาที)
+        function setupMobileSecretTrigger() {
+            const titleEl = document.getElementById('displayTitle');
+            let pressTimer;
+
+            const openPassPrompt = () => {
+                document.getElementById('passModal').style.display = 'flex';
+                document.getElementById('passInput').focus();
+            };
+
+            // สำหรับหน้าจอสัมผัส (iPad / มือถือ)
+            titleEl.addEventListener('touchstart', (e) => {
+                pressTimer = setTimeout(openPassPrompt, 3000);
+            }, { passive: true });
+            titleEl.addEventListener('touchend', () => clearTimeout(pressTimer));
+            titleEl.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
+            // สำหรับคลิกเมาส์ค้าง 3 วินาทีบนคอมพิวเตอร์
+            titleEl.addEventListener('mousedown', () => {
+                pressTimer = setTimeout(openPassPrompt, 3000);
+            });
+            titleEl.addEventListener('mouseup', () => clearTimeout(pressTimer));
+            titleEl.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+        }
 
         function updateHeaderDisplay() {
             document.getElementById('displayTitle').innerText = state.title;
@@ -344,7 +371,6 @@
                 t.name = document.getElementById(`tname_${idx}`).value;
             });
 
-            // อัปเดตชื่อทีมในตารางผลลัพธ์ด้วย
             groups.forEach(g => {
                 state.results[g] = state.results[g].map(resTeam => {
                     const updated = state.teams.find(t => t.id === resTeam.id);
