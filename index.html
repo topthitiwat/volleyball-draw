@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRPC X SANGDA โอเพ่น ครั้งที่ 12</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <!-- html2canvas สำหรับบันทึกรูปภาพหน้าจอตาราง -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Kanit', sans-serif; }
+        body { background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; position: relative; }
+        
+        /* Floating Settings Button for Normal Settings */
+        .settings-trigger { position: absolute; top: 20px; right: 20px; background: #334155; color: #38bdf8; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: all 0.2s; }
+        .settings-trigger:hover { background: #475569; transform: rotate(45deg); }
+
+        .header { text-align: center; margin-bottom: 20px; margin-top: 10px; }
+        .header h1 { font-size: 2.2rem; font-weight: 700; color: #38bdf8; text-shadow: 0 2px 10px rgba(56,189,248,0.3); }
+        .header p { color: #94a3b8; font-size: 1rem; }
+
+        .controls { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }
+        .btn { background: #3b82f6; color: white; border: none; padding: 12px 28px; font-size: 1.1rem; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
+        .btn:hover { background: #2563eb; transform: translateY(-2px); }
+        .btn-reset { background: #ef4444; box-shadow: 0 4px 12px rgba(239,68,68,0.4); }
+        .btn-reset:hover { background: #dc2626; }
+        .btn-success { background: #10b981; box-shadow: 0 4px 12px rgba(16,185,129,0.4); }
+        .btn-success:hover { background: #059669; }
+        .btn-sm { padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; box-shadow: none; }
+
+        /* Stage / Slot Machine */
+        .stage-container { background: #1e293b; border: 2px solid #334155; border-radius: 16px; padding: 25px; width: 100%; max-width: 500px; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .stage-title { font-size: 1rem; color: #cbd5e1; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .roulette-box { background: #0f172a; border: 3px solid #38bdf8; border-radius: 12px; height: 90px; display: flex; align-items: center; justify-content: center; padding: 0 20px; }
+        .roulette-box span { font-size: 2rem; font-weight: 700; color: #f8fafc; text-align: center; }
+
+        /* Capture Area Wrapper */
+        #captureArea { width: 100%; max-width: 1240px; padding: 20px; background: #0f172a; border-radius: 16px; display: flex; flex-direction: column; align-items: center; }
+        .capture-header { text-align: center; margin-bottom: 20px; display: none; }
+        .capture-header h2 { font-size: 1.8rem; color: #38bdf8; }
+        .capture-header p { color: #94a3b8; }
+
+        /* Groups Grid */
+        .groups-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; width: 100%; }
+        .group-card { background: #1e293b; border-radius: 12px; border: 1px solid #334155; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .group-header { background: #334155; color: #38bdf8; padding: 10px; font-size: 1.2rem; font-weight: 700; text-align: center; }
+        .group-list { padding: 15px; display: flex; flex-direction: column; gap: 10px; min-height: 180px; }
+        .team-slot { background: #0f172a; border: 1px dashed #475569; border-radius: 8px; padding: 12px 15px; display: flex; align-items: center; min-height: 52px; }
+        .team-slot.filled { border: 1px solid #3b82f6; background: #172554; }
+        .team-slot .name { font-size: 1.1rem; font-weight: 600; color: #e2e8f0; }
+
+        /* Modal Styles */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: #1e293b; border: 1px solid #334155; width: 90%; max-width: 850px; max-height: 90vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+        .modal-header { padding: 20px; background: #0f172a; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+        .modal-header h2 { font-size: 1.5rem; color: #38bdf8; }
+        .close-btn { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        
+        /* Form Elements */
+        .setting-section { margin-bottom: 25px; }
+        .setting-section h3 { font-size: 1.1rem; color: #38bdf8; margin-bottom: 10px; border-bottom: 1px solid #334155; padding-bottom: 5px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px; }
+        .form-control { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; font-size: 1rem; }
+        
+        .team-edit-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .team-edit-row { display: flex; align-items: center; gap: 10px; background: #0f172a; padding: 8px; border-radius: 8px; border: 1px solid #334155; }
+        .team-edit-row span { color: #38bdf8; font-weight: bold; width: 40px; }
+        .team-edit-row input[type="text"] { flex: 1; padding: 8px 12px; background: #1e293b; border: 1px solid #475569; color: white; border-radius: 4px; font-size: 1rem; }
+
+        .preset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .preset-slot { background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #475569; text-align: center; }
+        .preset-slot label { font-size: 0.8rem; color: #38bdf8; display: block; margin-bottom: 5px; }
+        .preset-slot select { width: 100%; padding: 6px; background: #1e293b; color: white; border: 1px solid #475569; border-radius: 4px; font-size: 0.9rem; }
+
+        /* Saved Presets Section */
+        .saved-presets-box { background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .saved-presets-box input { flex: 1; min-width: 200px; padding: 8px; background: #1e293b; border: 1px solid #475569; color: white; border-radius: 6px; }
+        .preset-chips-container { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .preset-chip { background: #334155; color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; border: 1px solid #475569; }
+        .preset-chip button { background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold; }
+
+        .modal-footer { padding: 15px 20px; background: #0f172a; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #334155; }
+    </style>
+</head>
+<body>
+
+    <!-- ปุ่มตั้งค่าปกติ (มุมขวาบน) -->
+    <button class="settings-trigger" onclick="openNormalSettings()" title="ตั้งค่าทั่วไป">⚙️</button>
+
+    <div class="header">
+        <h1 id="displayTitle">IRPC X SANGDA โอเพ่น ครั้งที่ 12</h1>
+        <p id="displaySubtitle">วันที่ 12-13 ธันวาคม 2569 ณ สนาม IRPC เฮ้าซิ่ง จ.ระยอง</p>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="drawBtn" onclick="startDraw()">จับฉลากทีมถัดไป (Spacebar)</button>
+        <button class="btn btn-success" onclick="saveResultAsImage()">📸 บันทึกรูปผลการจับฉลาก</button>
+        <button class="btn btn-reset" onclick="resetDraw()">รีเซ็ตผลทั้งหมด</button>
+    </div>
+
+    <div class="stage-container">
+        <div class="stage-title" id="stageStatus">พร้อมจับฉลาก</div>
+        <div class="roulette-box" id="rouletteBox">
+            <span>กดปุ่มจับฉลากด้านบน</span>
+        </div>
+    </div>
+
+    <!-- พื้นที่สำหรับบันทึกเป็นรูปภาพ (รวมชื่อรายการ + ตาราง 4 สาย) -->
+    <div id="captureArea">
+        <div class="capture-header" id="captureHeader">
+            <h2 id="capTitle">IRPC X SANGDA โอเพ่น ครั้งที่ 12</h2>
+            <p id="capSubtitle">ผลการจับฉลากแบ่งสายการแข่งขัน</p>
+        </div>
+        <div class="groups-grid" id="groupsGrid"></div>
+    </div>
+
+    <!-- Modal: ใส่รหัสผ่านเพื่อเข้าหน้าล็อกผล -->
+    <div class="modal" id="passModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>ใส่รหัสผ่านลับหลังบ้าน</h2>
+                <button class="close-btn" onclick="closeModals()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>รหัสผ่าน (ค่าเริ่มต้น: 1234)</label>
+                    <input type="password" id="passInput" class="form-control" placeholder="กรอกรหัสผ่าน">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="verifyPassword()">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: ตั้งค่าปกติ (แก้ไขชื่อทีม) -->
+    <div class="modal" id="normalSettingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ตั้งค่าทั่วไป (แก้ไขชื่อรายการและรายชื่อทีม)</h2>
+                <button class="close-btn" onclick="closeModals()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-section">
+                    <h3>ข้อมูลการแข่งขัน</h3>
+                    <div class="form-group">
+                        <label>ชื่อรายการแข่งขัน</label>
+                        <input type="text" id="inputTitle" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>รายละเอียด/วันที่</label>
+                        <input type="text" id="inputSubtitle" class="form-control">
+                    </div>
+                </div>
+
+                <div class="setting-section">
+                    <h3>จัดการรายชื่อ 16 ทีม</h3>
+                    <div class="team-edit-grid" id="normalTeamEditList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-reset" onclick="loadDefaultData()">โหลดค่าเริ่มต้น IRPC</button>
+                <button class="btn" onclick="saveNormalSettings()">บันทึกการตั้งค่า</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: ตั้งค่าล็อกผลหลังบ้าน (ป้องด้วยรหัสผ่าน) -->
+    <div class="modal" id="secretSettingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ตั้งค่าหลังบ้าน (โหมดล็อกผล & บันทึกรูปแบบ)</h2>
+                <button class="close-btn" onclick="closeModals()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-section">
+                    <h3>โหมดการทำงาน</h3>
+                    <div class="form-group">
+                        <label>เลือกโหมดการจับฉลาก</label>
+                        <select id="modeSelect" class="form-control" onchange="toggleMode()">
+                            <option value="random">โหมดสุ่มจริง (Random Mode)</option>
+                            <option value="preset">โหมดล็อกผลล่วงหน้า (Rigged / Preset Mode)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting-section" id="presetSection" style="display:none;">
+                    <h3>บันทึกและโหลดชุดผลล่วงหน้า (เร็วทันใจ)</h3>
+                    <div class="saved-presets-box">
+                        <input type="text" id="presetNameInput" placeholder="ตั้งชื่อชุดล็อกผล เช่น ชุดที่ 1, ชุดสายแข็ง">
+                        <button class="btn btn-success" onclick="saveCurrentPresetGroup()">💾 บันทึกชุดนี้ไว้</button>
+                    </div>
+                    <label>ชุดผลล่วงหน้าที่บันทึกไว้ (คลิกเพื่อโหลด):</label>
+                    <div class="preset-chips-container" id="presetChipsContainer"></div>
+                    <hr style="border: 0; border-top: 1px solid #334155; margin: 15px 0;">
+
+                    <h3>กำหนดสายล่วงหน้า (ล็อกผล 16 ทีมทีละช่อง)</h3>
+                    <div class="preset-grid" id="presetGrid"></div>
+                </div>
+
+                <div class="setting-section">
+                    <h3>ความปลอดภัย</h3>
+                    <div class="form-group">
+                        <label>เปลี่ยนรหัสผ่านหลังบ้านใหม่</label>
+                        <input type="text" id="newPassInput" class="form-control" placeholder="ใส่รหัสผ่านใหม่ (ปล่อยว่างถ้าไม่เปลี่ยน)">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="saveSecretSettings()">บันทึกการตั้งค่าหลังบ้าน</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const defaultTeamNames = [
+            "ไออาร์พีซี (เจ้าภาพ)",
+            "อัสสัมชัญบางรัก",
+            "แสงดาวีซี (เจ้าภาพ)",
+            "T-rex",
+            "เอื้องดอย วีซี",
+            "หมอสมิง VC",
+            "HIWWHEE",
+            "Kardashians",
+            "บ้านสวนทองมา",
+            "บ้านสวนณัธมณ",
+            "friendship vc",
+            "Himantura",
+            "PHALANX",
+            "สองสลึง VC",
+            "Na Nang Hee.VC",
+            "IRPCT VC"
+        ];
+
+        const defaultTeams = defaultTeamNames.map((name, idx) => ({ id: idx + 1, name: name }));
+
+        let state = JSON.parse(localStorage.getItem('irpc_vb_state_text_only')) || {
+            title: "IRPC X SANGDA โอเพ่น ครั้งที่ 12",
+            subtitle: "วันที่ 12-13 ธันวาคม 2569 ณ สนาม IRPC เฮ้าซิ่ง จ.ระยอง",
+            teams: defaultTeams,
+            mode: 'random',
+            password: '1234',
+            preset: {},
+            savedPresets: {},
+            results: { A: [], B: [], C: [], D: [] },
+            drawnTeamIds: [],
+            stepIndex: 0
+        };
+
+        const groups = ['A', 'B', 'C', 'D'];
+        const drawSequence = [];
+        for(let i=0; i<4; i++) {
+            groups.forEach(g => drawSequence.push(`${g}${i+1}`));
+        }
+
+        window.onload = () => {
+            updateHeaderDisplay();
+            renderGroups();
+            checkComplete();
+        };
+
+        function updateHeaderDisplay() {
+            document.getElementById('displayTitle').innerText = state.title;
+            document.getElementById('displaySubtitle').innerText = state.subtitle;
+            document.getElementById('capTitle').innerText = state.title;
+            document.getElementById('capSubtitle').innerText = "ผลการจับฉลากแบ่งสายการแข่งขัน • " + state.subtitle;
+        }
+
+        function saveResultAsImage() {
+            const captureArea = document.getElementById('captureArea');
+            const capHeader = document.getElementById('captureHeader');
+            
+            capHeader.style.display = 'block';
+
+            html2canvas(captureArea, {
+                backgroundColor: '#0f172a',
+                scale: 2
+            }).then(canvas => {
+                capHeader.style.display = 'none';
+                const link = document.createElement('a');
+                link.download = `ผลการจับฉลากแบ่งสาย_${state.title}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                capHeader.style.display = 'none';
+                alert('เกิดข้อผิดพลาดในการบันทึกรูปภาพ: ' + err);
+            });
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if(e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'l') {
+                e.preventDefault();
+                document.getElementById('passModal').style.display = 'flex';
+                document.getElementById('passInput').focus();
+            }
+            if(e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault();
+                startDraw();
+            }
+        });
+
+        function verifyPassword() {
+            const input = document.getElementById('passInput').value;
+            if(input === state.password) {
+                document.getElementById('passModal').style.display = 'none';
+                document.getElementById('passInput').value = '';
+                openSecretSettings();
+            } else {
+                alert('รหัสผ่านไม่ถูกต้อง!');
+            }
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function openNormalSettings() {
+            document.getElementById('inputTitle').value = state.title;
+            document.getElementById('inputSubtitle').value = state.subtitle;
+            
+            const container = document.getElementById('normalTeamEditList');
+            container.innerHTML = '';
+            state.teams.forEach((t, idx) => {
+                container.innerHTML += `
+                    <div class="team-edit-row">
+                        <span>#${idx+1}</span>
+                        <input type="text" id="tname_${idx}" value="${t.name}">
+                    </div>
+                `;
+            });
+            document.getElementById('normalSettingsModal').style.display = 'flex';
+        }
+
+        function saveNormalSettings() {
+            state.title = document.getElementById('inputTitle').value;
+            state.subtitle = document.getElementById('inputSubtitle').value;
+
+            state.teams.forEach((t, idx) => {
+                t.name = document.getElementById(`tname_${idx}`).value;
+            });
+
+            // อัปเดตชื่อทีมในตารางผลลัพธ์ด้วย
+            groups.forEach(g => {
+                state.results[g] = state.results[g].map(resTeam => {
+                    const updated = state.teams.find(t => t.id === resTeam.id);
+                    return updated ? { ...updated } : resTeam;
+                });
+            });
+
+            localStorage.setItem('irpc_vb_state_text_only', JSON.stringify(state));
+            closeModals();
+            updateHeaderDisplay();
+            renderGroups();
+            alert('บันทึกการตั้งค่าเรียบร้อย!');
+        }
+
+        function openSecretSettings() {
+            document.getElementById('modeSelect').value = state.mode;
+            document.getElementById('newPassInput').value = '';
+
+            renderPresetGrid(state.preset);
+            renderPresetChips();
+            toggleMode();
+            document.getElementById('secretSettingsModal').style.display = 'flex';
+        }
+
+        function renderPresetGrid(presetValues) {
+            const presetContainer = document.getElementById('presetGrid');
+            presetContainer.innerHTML = '';
+            drawSequence.forEach(slotKey => {
+                let optionsHtml = `<option value="">-- สุ่มอัตโนมัติ --</option>`;
+                state.teams.forEach(t => {
+                    let selected = (presetValues[slotKey] == t.id) ? 'selected' : '';
+                    optionsHtml += `<option value="${t.id}" ${selected}>${t.name}</option>`;
+                });
+                presetContainer.innerHTML += `
+                    <div class="preset-slot">
+                        <label>ช่อง ${slotKey}</label>
+                        <select id="preset_${slotKey}">${optionsHtml}</select>
+                    </div>
+                `;
+            });
+        }
+
+        function saveCurrentPresetGroup() {
+            const nameInput = document.getElementById('presetNameInput');
+            const presetName = nameInput.value.trim();
+            if(!presetName) {
+                alert('กรุณาตั้งชื่อชุดล็อกผลก่อนบันทึกครับ (เช่น ชุดที่ 1)');
+                return;
+            }
+
+            let currentPresetData = {};
+            drawSequence.forEach(slotKey => {
+                const val = document.getElementById(`preset_${slotKey}`).value;
+                if(val) currentPresetData[slotKey] = parseInt(val);
+            });
+
+            if(!state.savedPresets) state.savedPresets = {};
+            state.savedPresets[presetName] = currentPresetData;
+            nameInput.value = '';
+            renderPresetChips();
+            alert(`บันทึกชุด "${presetName}" เรียบร้อยแล้ว!`);
+        }
+
+        function renderPresetChips() {
+            const container = document.getElementById('presetChipsContainer');
+            container.innerHTML = '';
+            if(!state.savedPresets || Object.keys(state.savedPresets).length === 0) {
+                container.innerHTML = '<span style="color: #64748b; font-size: 0.9rem;">ยังไม่มีชุดที่บันทึกไว้</span>';
+                return;
+            }
+
+            for(let name in state.savedPresets) {
+                container.innerHTML += `
+                    <div class="preset-chip">
+                        <span style="cursor:pointer;" onclick="loadPresetGroup('${name}')" title="คลิกเพื่อโหลดชุดนี้">${name}</span>
+                        <button onclick="deletePresetGroup('${name}')" title="ลบชุดนี้">&times;</button>
+                    </div>
+                `;
+            }
+        }
+
+        function loadPresetGroup(name) {
+            if(state.savedPresets && state.savedPresets[name]) {
+                renderPresetGrid(state.savedPresets[name]);
+                alert(`โหลดชุด "${name}" เข้าสู่ช่องตั้งค่าเรียบร้อย!`);
+            }
+        }
+
+        function deletePresetGroup(name) {
+            if(confirm(`ต้องการลบชุด "${name}" ใช่หรือไม่?`)) {
+                delete state.savedPresets[name];
+                renderPresetChips();
+            }
+        }
+
+        function toggleMode() {
+            const mode = document.getElementById('modeSelect').value;
+            document.getElementById('presetSection').style.display = (mode === 'preset') ? 'block' : 'none';
+        }
+
+        function saveSecretSettings() {
+            state.mode = document.getElementById('modeSelect').value;
+            if(state.mode === 'preset') {
+                state.preset = {};
+                drawSequence.forEach(slotKey => {
+                    const val = document.getElementById(`preset_${slotKey}`).value;
+                    if(val) state.preset[slotKey] = parseInt(val);
+                });
+            }
+            const newPass = document.getElementById('newPassInput').value;
+            if(newPass) state.password = newPass;
+
+            localStorage.setItem('irpc_vb_state_text_only', JSON.stringify(state));
+            closeModals();
+            alert('บันทึกการตั้งค่าหลังบ้านเรียบร้อย!');
+        }
+
+        function loadDefaultData() {
+            if(confirm('รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นของ IRPC ใช่หรือไม่?')) {
+                state.teams = JSON.parse(JSON.stringify(defaultTeams));
+                state.preset = {};
+                localStorage.setItem('irpc_vb_state_text_only', JSON.stringify(state));
+                closeModals();
+                renderGroups();
+                alert('รีเซ็ตข้อมูลสำเร็จ!');
+            }
+        }
+
+        function startDraw() {
+            if(state.stepIndex >= 16) {
+                alert('จับฉลากครบทุกทีมเรียบร้อยแล้ว!');
+                return;
+            }
+
+            const currentSlotKey = drawSequence[state.stepIndex];
+            const groupKey = currentSlotKey[0];
+
+            let winnerTeamId;
+            if(state.mode === 'preset' && state.preset[currentSlotKey]) {
+                winnerTeamId = state.preset[currentSlotKey];
+                if(state.drawnTeamIds.includes(winnerTeamId)) {
+                    winnerTeamId = getRandomAvailableTeam();
+                }
+            } else {
+                winnerTeamId = getRandomAvailableTeam();
+            }
+
+            const winnerTeam = state.teams.find(t => t.id === winnerTeamId);
+
+            const rouletteBox = document.getElementById('rouletteBox');
+            const statusBox = document.getElementById('stageStatus');
+            const drawBtn = document.getElementById('drawBtn');
+            drawBtn.disabled = true;
+            statusBox.innerText = `กำลังสุ่มเลือกทีมลงสาย ${groupKey} (ตำแหน่งที่ ${currentSlotKey[1]})...`;
+
+            let counter = 0;
+            const animInterval = setInterval(() => {
+                const randomTeam = state.teams[Math.floor(Math.random() * state.teams.length)];
+                rouletteBox.innerHTML = `<span>${randomTeam.name}</span>`;
+                counter++;
+                if(counter > 20) {
+                    clearInterval(animInterval);
+                    rouletteBox.innerHTML = `<span>${winnerTeam.name}</span>`;
+                    statusBox.innerText = `ยินดีด้วย! สาย ${currentSlotKey} ได้แก่`;
+                    
+                    state.drawnTeamIds.push(winnerTeam.id);
+                    state.results[groupKey].push(winnerTeam);
+                    state.stepIndex++;
+                    localStorage.setItem('irpc_vb_state_text_only', JSON.stringify(state));
+
+                    renderGroups();
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                    drawBtn.disabled = false;
+                    checkComplete();
+                }
+            }, 80);
+        }
+
+        function getRandomAvailableTeam() {
+            const available = state.teams.filter(t => !state.drawnTeamIds.includes(t.id));
+            const randomIndex = Math.floor(Math.random() * available.length);
+            return available[randomIndex].id;
+        }
+
+        function renderGroups() {
+            const grid = document.getElementById('groupsGrid');
+            grid.innerHTML = '';
+
+            groups.forEach(g => {
+                let slotsHtml = '';
+                for(let i=0; i<4; i++) {
+                    const team = state.results[g][i];
+                    if(team) {
+                        slotsHtml += `
+                            <div class="team-slot filled">
+                                <span class="name">${i+1}. ${team.name}</span>
+                            </div>
+                        `;
+                    } else {
+                        slotsHtml += `
+                            <div class="team-slot">
+                                <span class="name" style="color: #64748b;">${i+1}. [ ว่าง ]</span>
+                            </div>
+                        `;
+                    }
+                }
+
+                grid.innerHTML += `
+                    <div class="group-card">
+                        <div class="group-header">สาย ${g}</div>
+                        <div class="group-list">${slotsHtml}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function resetDraw() {
+            if(confirm('ต้องการรีเซ็ตผลการจับฉลากทั้งหมดเริ่มใหม่ใช่หรือไม่?')) {
+                state.results = { A: [], B: [], C: [], D: [] };
+                state.drawnTeamIds = [];
+                state.stepIndex = 0;
+                localStorage.setItem('irpc_vb_state_text_only', JSON.stringify(state));
+                renderGroups();
+                document.getElementById('stageStatus').innerText = 'พร้อมจับฉลาก';
+                document.getElementById('rouletteBox').innerHTML = '<span>กดปุ่มจับฉลากด้านบน</span>';
+            }
+        }
+
+        function checkComplete() {
+            if(state.stepIndex >= 16) {
+                document.getElementById('stageStatus').innerText = '🎉 สิ้นสุดการจับฉลากแบ่งสายครบทุกทีมแล้ว! 🎉';
+            }
+        }
+    </script>
+</body>
+</html>
